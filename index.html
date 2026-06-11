@@ -332,7 +332,7 @@ async function buy(btn){
     let html = "<div class='mail-box'>"+LAST_MAILS.join("<br>")+"</div>";
     html += `<div class='btn-row' style='margin-top:10px;'>
       <button class='btn btn-primary btn-sm' onclick='copyAll()'>📋 Copy All</button>
-      <button class='btn btn-gray btn-sm' onclick='dlTxt()'>⬇️ .txt</button>
+      <button class='btn btn-green btn-sm' onclick='copyMailOnly()'>✉️ Copy Mail</button>
     </div>`;
     html += "<p style='margin-top:10px;font-size:13px;color:#374151;'>💳 Còn lại: <b>"+fmt(d.remaining_balance)+"đ</b></p>";
     showResult(html);
@@ -386,7 +386,7 @@ async function loadDetail(id){
     let html="<div class='mail-box'>"+d.mails.join("<br>")+"</div>";
     html+=`<div class='btn-row' style='margin-top:10px;'>
       <button class='btn btn-primary btn-sm' onclick='copyAll()'>📋 Copy All</button>
-      <button class='btn btn-gray btn-sm' onclick='dlTxt()'>⬇️ .txt</button>
+      <button class='btn btn-green btn-sm' onclick='copyMailOnly()'>✉️ Copy Mail</button>
     </div>`;
     showResult(html);
   }catch(e){ showResult("❌ Lỗi kết nối"); }
@@ -407,12 +407,11 @@ function copyAll(){
   toast("Đã copy "+LAST_MAILS.length+" mail");
 }
 
-function dlTxt(){
+function copyMailOnly(){
   if(!LAST_MAILS.length){ toast("Không có dữ liệu"); return; }
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([LAST_MAILS.join("\n")],{type:"text/plain"}));
-  a.download="mails_"+Date.now()+".txt";
-  a.click();
+  const mails = LAST_MAILS.map(m => m.split("|")[0]).join("\n");
+  navigator.clipboard.writeText(mails);
+  toast("Đã copy "+LAST_MAILS.length+" mail");
 }
 
 function logout(){
