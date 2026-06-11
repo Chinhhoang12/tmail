@@ -203,6 +203,8 @@ let OTP_IV = null;
 let BUY_LOCK = false;
 let AUTO_LINK = "";
 
+const CACHE_TTL = 43200000; // 12 giờ
+
 function fmt(n){
   return Number(n||0).toString().replace(/\B(?=(\d{3})+(?!\d))/g,".");
 }
@@ -221,6 +223,26 @@ function saveLogin(k,p){
 
 function getK(){ return localStorage.getItem("mk")||""; }
 function getP(){ return localStorage.getItem("mp")||""; }
+
+function saveCache(balance, price){
+  localStorage.setItem("cached_balance", balance);
+  localStorage.setItem("cached_price", price);
+  localStorage.setItem("cached_time", Date.now());
+}
+
+function getCache(){
+  const balance = localStorage.getItem("cached_balance");
+  const price = parseFloat(localStorage.getItem("cached_price")||0);
+  const time = parseInt(localStorage.getItem("cached_time")||0);
+  const valid = balance !== null && (Date.now() - time) < CACHE_TTL;
+  return { balance, price, valid };
+}
+
+function clearCache(){
+  localStorage.removeItem("cached_balance");
+  localStorage.removeItem("cached_price");
+  localStorage.removeItem("cached_time");
+}
 
 function toggleReg(){
   const b=document.getElementById("reg_box");
@@ -243,7 +265,19 @@ window.onload = async () => {
   if(k && p){
     document.getElementById("key").value = k;
     document.getElementById("password").value = p;
-    await doLogin(k, p);
+
+    const cache = getCache();
+    if(cache.valid){
+      // Hiện UI ngay lập tức từ cache
+      PRICE = cache.price || PRICE;
+      showMain(k, cache.balance);
+      LOGGED = true;
+      calcPrice();
+      // Gọi API ngầm để cập nhật số dư mới nhất
+      setTimeout(()=>doLoginSilent(k, p), 300);
+    } else {
+      await doLogin(k, p);
+    }
   }
 
   loadShop();
@@ -277,11 +311,32 @@ async function doLogin(k, p){
     if(d.error){ toast(d.error); return; }
     saveLogin(k, p);
     PRICE = d.price || PRICE;
+    saveCache(d.balance, PRICE);
     showMain(k, d.balance);
     if(!LOGGED){ toast("Đăng nhập thành công"); LOGGED=true; }
     calcPrice();
     setInterval(()=>refreshBalance(k,p), 20000);
   }catch(e){ toast("Lỗi kết nối"); }
+}
+
+// Refresh ngầm sau khi load từ cache — không block UI, không toast
+async function doLoginSilent(k, p){
+  try{
+    const r = await fetch(API+"/user_info",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({key:k, password:p})
+    });
+    const d = await r.json();
+    if(d.error) return;
+    PRICE = d.price || PRICE;
+    saveCache(d.balance, PRICE);
+    document.getElementById("balance_row").innerHTML =
+      "<b style='color:#2563eb;margin-right:12px'>"+k+"</b>💳 Số dư: <b>"+fmt(d.balance)+"đ</b>";
+    document.getElementById("price").innerText = fmt(PRICE)+"đ";
+    calcPrice();
+    setInterval(()=>refreshBalance(k,p), 20000);
+  }catch(e){}
 }
 
 function showMain(k, bal){
@@ -301,6 +356,7 @@ async function refreshBalance(k,p){
     });
     const d = await r.json();
     if(d.error) return;
+    saveCache(d.balance, d.price||PRICE);
     document.getElementById("balance_row").innerHTML =
       "<b style='color:#2563eb;margin-right:12px'>"+k+"</b>💳 Số dư: <b>"+fmt(d.balance)+"đ</b>";
   }catch(e){}
@@ -339,6 +395,7 @@ async function buy(btn){
     document.getElementById("quantity").value="";
     document.getElementById("total_price").innerText="0đ";
     toast("Mua thành công!");
+    saveCache(d.remaining_balance, PRICE);
     refreshBalance(getK(), getP());
     loadShop();
   }catch(e){ showResult("❌ Lỗi kết nối"); }
@@ -417,6 +474,7 @@ function copyMailOnly(){
 function logout(){
   localStorage.removeItem("mk");
   localStorage.removeItem("mp");
+  clearCache();
   LOGGED=false;
   document.getElementById("main_card").classList.add("hidden");
   document.getElementById("login_card").classList.remove("hidden");
@@ -494,6 +552,7 @@ async function changePass(){
     const d=await r.json();
     if(d.error){ toast(d.error); return; }
     saveLogin(k,p1);
+    clearCache();
     toast("Đổi mật khẩu thành công!");
     document.getElementById("new_pass1").value="";
     document.getElementById("new_pass2").value="";
