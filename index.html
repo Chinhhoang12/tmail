@@ -102,7 +102,7 @@ input:focus{border-color:#2563eb;}
         <div class="row">
           <div>
             <label>Số lượng</label>
-            <input type="number" id="quantity" placeholder="0" oninput="calcPrice()">
+            <input type="number" id="quantity" value="1" min="1" oninput="calcPrice()">
           </div>
           <div class="price-tag" id="total_price">0đ</div>
         </div>
@@ -264,6 +264,7 @@ async function doLogin(k, p){
     PRICE = d.price || PRICE;
     showMain(k, d.balance);
     if(!LOGGED){ toast("Đăng nhập thành công"); LOGGED=true; }
+    calcPrice();
     setInterval(()=>refreshBalance(k,p), 20000);
   }catch(e){ toast("Lỗi kết nối"); }
 }
