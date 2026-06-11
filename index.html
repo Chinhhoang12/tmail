@@ -89,6 +89,9 @@ input:focus{border-color:#2563eb;}
         <span>📦 Kho: <b id="stock">...</b></span>
         <span>💵 Giá: <b id="price">...</b></span>
       </div>
+      <div style="text-align:center;margin-top:8px;">
+        <button class="btn btn-green btn-sm" onclick="openNap()">💳 Nạp tiền</button>
+      </div>
     </div>
 
     <div class="card" style="padding-top:10px;">
@@ -107,8 +110,8 @@ input:focus{border-color:#2563eb;}
           <div class="price-tag" id="total_price">0đ</div>
         </div>
 
-        <div class="btn-row">
-          <button class="btn btn-primary" onclick="buy(this)">🛒 Mua</button>
+        <div style="text-align:center;margin-top:14px;">
+          <button class="btn btn-primary" style="width:100%;padding:14px;font-size:17px;justify-content:center;" onclick="buy(this)">🛒 Mua</button>
         </div>
       </div>
 
@@ -162,6 +165,19 @@ input:focus{border-color:#2563eb;}
       </div>
 
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="nap_overlay">
+  <div class="popup">
+    <div class="popup-header">
+      <b style="font-size:17px;">💳 Nạp tiền</b>
+      <button class="close-btn" onclick="closeNap()">✖</button>
+    </div>
+    <label>Số tiền (tối thiểu 10.000đ)</label>
+    <input type="number" id="nap_amount" placeholder="VD: 50000">
+    <button class="btn btn-green" style="width:100%" onclick="taoQR()">Tạo QR chuyển khoản</button>
+    <div id="qr_result" style="margin-top:14px;text-align:center;"></div>
   </div>
 </div>
 
@@ -527,6 +543,28 @@ async function checkOTP(){
     else if(d.status==="timeout"){ clearInterval(OTP_IV); el.innerHTML="⌛ Không nhận được OTP"; }
     else if(d.status==="failed"){ clearInterval(OTP_IV); el.innerHTML="❌ "+(d.error||"Lỗi"); }
   }catch(e){ document.getElementById("otp_status").innerHTML="🔄 Đang kết nối lại..."; }
+}
+
+function openNap(){
+  document.getElementById("nap_overlay").classList.add("show");
+}
+function closeNap(){
+  document.getElementById("nap_overlay").classList.remove("show");
+  document.getElementById("qr_result").innerHTML="";
+  document.getElementById("nap_amount").value="";
+}
+function taoQR(){
+  const k=getK();
+  const amount=document.getElementById("nap_amount").value;
+  if(!amount){ toast("Nhập số tiền"); return; }
+  if(Number(amount)<10000){ toast("Nạp tối thiểu 10.000đ"); return; }
+  const content="ID_"+k;
+  const qr="https://img.vietqr.io/image/MB-0332708028-compact2.png?amount="+amount+"&addInfo="+content;
+  document.getElementById("qr_result").innerHTML=`
+    <div style="font-size:13px;margin-bottom:6px;">Nội dung CK: <b style="color:#2563eb;">${content}</b></div>
+    <img src="${qr}" style="width:220px;border-radius:10px;">
+    <div style="font-size:12px;color:#6b7280;margin-top:6px;">👉 Giữ ảnh để lưu QR</div>
+  `;
 }
 </script>
 </body>
